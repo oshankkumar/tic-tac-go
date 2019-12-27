@@ -89,6 +89,18 @@ func IsWinner(cells []Cell) bool {
 
 type Board [N][N]Marker
 
+func NewBoard() *Board {
+	b := &Board{}
+	for i := 0; i < N; i++ {
+		line := [N]Marker{}
+		for j := 0; j < N; j++ {
+			line[j] = "_"
+		}
+		b[i] = line
+	}
+	return b
+}
+
 func DisplayBoard(b *Board, p [2]*Player) string {
 	buf := &bytes.Buffer{}
 	template.Must(template.New("board").Parse(boardTmpl)).Execute(buf, struct {
@@ -109,6 +121,24 @@ func (b *Board) FillCell(c Cell, m Marker) {
 type Player struct {
 	Name   string
 	Marker Marker
+}
+
+func readPlayers() [2]*Player {
+	n1 := readString("Enter Player1 Name: ")
+	marker := readString("Enter Marker Choice For %s [X/O]: ", n1)
+	for marker != string(X) && marker != string(O) {
+		marker = readString("Invalid Input, Please Enter Marker Choice [X/O]: ")
+	}
+	n2 := readString("Enter Player2 Name: ")
+
+	p1 := NewPlayer(n1, Marker(marker))
+	marker2 := O
+	if p1.Marker == O {
+		marker2 = X
+	}
+	p2 := NewPlayer(n2, marker2)
+
+	return [2]*Player{p1, p2}
 }
 
 func NewPlayer(n string, m Marker) *Player {
@@ -176,24 +206,7 @@ func (g *Game) startRender() {
 	SlowPrint(DisplayBoard(g.board, [2]*Player{{}, {}}), time.Millisecond*30)
 }
 
-func (g *Game) Start() {
-	g.startRender()
-	n1 := readString("Enter Player1 Name: ")
-	marker := readString("Enter Marker Choice For %s [X/O]: ", n1)
-	for marker != string(X) && marker != string(O) {
-		marker = readString("Invalid Input, Please Enter Marker Choice [X/O]: ")
-	}
-	n2 := readString("Enter Player2 Name: ")
-
-	p1 := NewPlayer(n1, Marker(marker))
-	marker2 := O
-	if p1.Marker == O {
-		marker2 = X
-	}
-	p2 := NewPlayer(n2, marker2)
-
-	players := [2]*Player{p1, p2}
-
+func (g *Game) Start(players [2]*Player) {
 	for {
 		for _, player := range players {
 			ClearAndPrintBoard(g.board, players)
@@ -252,15 +265,28 @@ func readInt(prompt string, args ...interface{}) int {
 	return d
 }
 
-func main() {
-	b := &Board{}
-	for i := 0; i < N; i++ {
-		line := [N]Marker{}
-		for j := 0; j < N; j++ {
-			line[j] = "_"
+func PromptConfirm(prompt string, args ...interface{}) bool {
+	for {
+		val := readString(prompt, args...)
+		switch val {
+		case "yes", "Y", "y":
+			return true
+		case "n", "no", "N":
+			return false
 		}
-		b[i] = line
 	}
-	g := &Game{board: b}
-	g.Start()
+}
+
+func main() {
+	g := &Game{board: NewBoard()}
+	g.startRender()
+	players := readPlayers()
+	g.Start(players)
+	for {
+		if !PromptConfirm("Do you want to Play Again [y/n]: ") {
+			break
+		}
+		g.board = NewBoard()
+		g.Start(players)
+	}
 }
