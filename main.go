@@ -66,7 +66,7 @@ func CrossDiagonalMatch(cells []Cell) bool {
 
 func DiagonalMatch(cells []Cell) bool {
 	n := 0
-	for _, c := range cells[1:] {
+	for _, c := range cells {
 		if c[0] == c[1] {
 			n++
 		}
