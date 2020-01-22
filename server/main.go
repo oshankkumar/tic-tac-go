@@ -1,33 +1,50 @@
-package main
+package server
 
 import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"os/exec"
+	"strings"
 	"text/template"
 	"time"
 )
 
-func main() {
-	tcpAddr, err := net.ResolveTCPAddr("tcp", ":1200")
-	checkError(err)
+const help = `Server started on port: %d
+Install telnet or nc on client machine
+Please enter following command from any other terminal or machine.
+telnet %s %d
+           OR
+nc %s %d
+`
+
+func Start(port int) error {
+	tcpAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return err
+	}
+
 	listener, err := net.ListenTCP("tcp", tcpAddr)
-	checkError(err)
-	fmt.Println("listening on", listener.Addr())
+	if err != nil {
+		return err
+	}
+
+	ip := GetOutboundIP()
+	fmt.Printf(help, port, ip, port, ip, port)
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
 			continue
 		}
-		go renderGame(conn)
+		go serveGame(conn)
 	}
 }
 
-func renderGame(conn net.Conn) {
+func serveGame(conn net.Conn) {
 	defer conn.Close()
 	g := &Game{board: NewBoard()}
 	g.startRender(conn)
@@ -39,13 +56,6 @@ func renderGame(conn net.Conn) {
 		}
 		g.board = NewBoard()
 		g.Start(conn, players)
-	}
-}
-
-func checkError(err error) {
-	if err != nil {
-		fmt.Fprint(os.Stderr, "Fatal error : %s", err)
-		os.Exit(1)
 	}
 }
 
@@ -318,4 +328,15 @@ func PromptConfirm(rw io.ReadWriter, prompt string, args ...interface{}) bool {
 			return false
 		}
 	}
+}
+
+func GetOutboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().String()
+
+	return strings.Split(localAddr, ":")[0]
 }
