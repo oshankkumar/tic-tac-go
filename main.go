@@ -19,7 +19,7 @@ func main() {
 
 func checkError(err error) {
 	if err != nil {
-		fmt.Fprint(os.Stderr, "Fatal error : %s", err)
+		fmt.Fprintf(os.Stderr, "Fatal error : %s\n", err)
 		os.Exit(1)
 	}
 }
